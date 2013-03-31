@@ -10,6 +10,7 @@
 
 #include "server/nginx.hpp"
 
+#include "oscompat.hpp"
 #include "daemon.hpp"
 #include "utility.hpp"
 
@@ -18,7 +19,6 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <grp.h>
-#include <unistd.h>
 
 Hydra::Server::Nginx::Nginx(std::string name, Hydra::Config::Section config, Hydra::Config::Section defaults, Hydra::Daemon& daemon) :
 	Base(name, config, defaults, daemon), plain(name, config, defaults, daemon), ssl(name, config, defaults, daemon), m_started(false)

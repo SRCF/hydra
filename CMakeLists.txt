@@ -46,6 +46,7 @@ set(HEADER_FILES
 	include/hostmap.hpp
 	include/http.hpp
 	include/log.hpp
+	include/oscompat.hpp
 	include/request.hpp
 	include/response.hpp
 	include/server.hpp
@@ -71,6 +72,7 @@ set(SOURCE_FILES
 	src/http.cpp
 	src/log.cpp
 	src/main.cpp
+	src/oscompat.cpp
 	src/request.cpp
 	src/response.cpp
 	src/server.cpp

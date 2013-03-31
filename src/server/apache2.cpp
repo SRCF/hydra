@@ -12,6 +12,7 @@
 
 #include "daemon.hpp"
 #include "utility.hpp"
+#include "oscompat.hpp"
 
 #include <boost/bind.hpp>
 #include <errno.h>
@@ -19,9 +20,6 @@
 #include <sys/wait.h>
 #include <pwd.h>
 #include <grp.h>
-#include <unistd.h>
-#include <sys/sysinfo.h>
-
 #include <iostream>
 
 Hydra::Server::Apache2::Apache2(std::string name, Hydra::Config::Section config, Hydra::Config::Section defaults, Hydra::Daemon& daemon) :
@@ -196,50 +194,56 @@ void Hydra::Server::Apache2::start()
 {
 	if (!m_started)
 	{
-		struct sysinfo sysinf;
+		#ifdef HYDRA_LINUX
 
-		if (sysinfo(&sysinf) != 0)
 		{
-			throw new Hydra::Exception("Hydra->Apache2->Unable to retrieve system info");
+			struct sysinfo sysinf;
+
+			if (sysinfo(&sysinf) != 0)
+			{
+				throw new Hydra::Exception("Hydra->Apache2->Unable to retrieve system info");
+			}
+
+			if (sysinf.loads[0] > (((float) (1 << SI_LOAD_SHIFT)) * m_load_1))
+			{
+				// Load too high.
+				throw new Hydra::Exception("Hydra->Apache2->System exceeding load 1 min max");
+			}
+
+			if (sysinf.loads[1] > (((float) (1 << SI_LOAD_SHIFT)) * m_load_5))
+			{
+				// Load too high.
+				throw new Hydra::Exception("Hydra->Apache2->System exceeding load 5 min max");
+			}
+
+			if (sysinf.loads[2] > (((float) (1 << SI_LOAD_SHIFT)) * m_load_15))
+			{
+				// Load too high.
+				throw new Hydra::Exception("Hydra->Apache2->System exceeding load 15 min max");
+			}
+	
+			// We only care when the system is actually short on memory, not meerly when linux has cached the entire disk
+
+			// Work out the number of free KB.
+
+			unsigned long free = (sysinf.freeram + sysinf.bufferram + sysinf.sharedram) * (sysinf.mem_unit / 1024);
+
+			if (free < m_mem_start)
+			{
+				throw new Hydra::Exception("Hydra->Apache2->System running low on memory");
+			}
+
+			// Work the amount of free swap - if the system is running short, back off.
+
+			free = sysinf.freeswap * (sysinf.mem_unit / 1024);
+
+			if (free < m_swap_start)
+			{
+				throw new Hydra::Exception("Hydra->Apache2->System running low on swap");
+			}
 		}
 
-		if (sysinf.loads[0] > (((float) (1 << SI_LOAD_SHIFT)) * m_load_1))
-		{
-			// Load too high.
-			throw new Hydra::Exception("Hydra->Apache2->System exceeding load 1 min max");
-		}
-
-		if (sysinf.loads[1] > (((float) (1 << SI_LOAD_SHIFT)) * m_load_5))
-		{
-			// Load too high.
-			throw new Hydra::Exception("Hydra->Apache2->System exceeding load 5 min max");
-		}
-
-		if (sysinf.loads[2] > (((float) (1 << SI_LOAD_SHIFT)) * m_load_15))
-		{
-			// Load too high.
-			throw new Hydra::Exception("Hydra->Apache2->System exceeding load 15 min max");
-		}
-
-		// We only care when the system is actually short on memory, not meerly when linux has cached the entire disk
-
-		// Work out the number of free KB.
-
-		unsigned long free = (sysinf.freeram + sysinf.bufferram + sysinf.sharedram) * (sysinf.mem_unit / 1024);
-
-		if (free < m_mem_start)
-		{
-			throw new Hydra::Exception("Hydra->Apache2->System running low on memory");
-		}
-
-		// Work the amount of free swap - if the system is running short, back off.
-
-		free = sysinf.freeswap * (sysinf.mem_unit / 1024);
-
-		if (free < m_swap_start)
-		{
-			throw new Hydra::Exception("Hydra->Apache2->System running low on swap");
-		}
+		#endif
 
 		signal("start");
 		m_started = true;
@@ -437,32 +441,43 @@ void Hydra::Server::Apache2::handle_timeout(const boost::system::error_code& e)
 		// Shutdown
 		if (m_live == 0)
 		{
-			struct sysinfo sysinf;
+			#ifdef HYDRA_LINUX
 
-			if (sysinfo(&sysinf) != 0)
 			{
-				reap("Unable to get system info");
+
+				struct sysinfo sysinf;
+
+				if (sysinfo(&sysinf) != 0)
+				{
+					reap("Unable to get system info");
+				}
+
+				// We only care when the system is actually short on memory, not meerly when linux has cached the entire disk
+
+				// Work out the number of free KB.
+
+				unsigned long free = (sysinf.freeram + sysinf.bufferram + sysinf.sharedram) * (sysinf.mem_unit / 1024);
+
+				if (free < m_mem_reap)
+				{
+					reap("Not enough free memory");
+				}
+
+				// Work the amount of free swap - if the system is running short, back off.
+
+				free = sysinf.freeswap * (sysinf.mem_unit / 1024);
+
+				if (free < m_swap_reap)
+				{
+					reap("Not enough free swap");
+				}
 			}
 
-			// We only care when the system is actually short on memory, not meerly when linux has cached the entire disk
+			#else
 
-			// Work out the number of free KB.
+			reap("Unable to determine system load");
 
-			unsigned long free = (sysinf.freeram + sysinf.bufferram + sysinf.sharedram) * (sysinf.mem_unit / 1024);
-
-			if (free < m_mem_reap)
-			{
-				reap("Not enough free memory");
-			}
-
-			// Work the amount of free swap - if the system is running short, back off.
-
-			free = sysinf.freeswap * (sysinf.mem_unit / 1024);
-
-			if (free < m_swap_reap)
-			{
-				reap("Not enough free swap");
-			}
+			#endif
 		}
 	}
 }
