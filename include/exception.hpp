@@ -23,7 +23,7 @@ public:
 	Exception(std::string what) throw();
 	~Exception() throw();
 
-	virtual const char* what() throw();
+	virtual const char* what() const throw();
 
 private:
 

@@ -10,17 +10,18 @@
 
 #include "exception.hpp"
 
-Hydra::Exception::Exception(std::string what) throw() : m_what(what){
+Hydra::Exception::Exception(std::string what) throw() : m_what(what)
+{
 
 }
 
-Hydra::Exception::~Exception() throw(){
+Hydra::Exception::~Exception() throw()
+{
 
 }
 
-const char* Hydra::Exception::what() throw(){
-
+const char* Hydra::Exception::what() const throw()
+{
 	return m_what.c_str();
-
 }
 
