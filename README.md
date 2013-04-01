@@ -21,7 +21,7 @@ Building
 $ cd build
 $ cmake ..
 $ make
-$ make install
+$ sudo make install
 ```
 
 At this point, there is a copy of the `hydra` daemon - `/usr/local/sbin/hydra`.
