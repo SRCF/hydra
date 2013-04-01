@@ -37,7 +37,9 @@ Hydra::Server::Apache2::Apache2(std::string name, Hydra::Config::Section config,
 	m_swap_start(10000),
 	m_mem_reap(4000000),
 	m_swap_reap(30000),
-	m_live(0){
+	m_live(0),
+	m_binary("/usr/sbin/apache2")
+{
 
 	// Setup ready to start Apache2.
 
@@ -51,10 +53,24 @@ Hydra::Server::Apache2::Apache2(std::string name, Hydra::Config::Section config,
 		throw new Exception("Hydra->Server->Apache->Configuration file not found [" + m_config_file + "]");
 	}
 
+	std::list<std::string> binaries = defaults.values("binary");
+
+	if (! binaries.empty())
+	{
+		m_binary = binaries.front();
+	}
+
+	binaries = config.values("binary");
+
+	if (! binaries.empty())
+	{
+		m_binary = binaries.front();
+	}
+
 	// Can we execute apache?
 
-	if(eaccess("/usr/sbin/apache2", R_OK | F_OK | X_OK )){
-		throw new Exception("Hydra->Server->Apache2->Can not call /usr/sbin/apache2");
+	if(eaccess(m_binary.c_str(), R_OK | F_OK | X_OK )){
+		throw new Exception("Hydra->Server->Apache2->Can not call " + m_binary);
 	}
 
 	// Get permissions data
@@ -317,7 +333,7 @@ void Hydra::Server::Apache2::signal(std::string signal){
 
 			char* newargv[10];
 
-			strmasscpy(newargv, 0, "/usr/sbin/apache2");
+			strmasscpy(newargv, 0, m_binary.c_str());
 			strmasscpy(newargv, 1, "-k");
 			strmasscpy(newargv, 2, signal);
 			strmasscpy(newargv, 3, "-d");
@@ -348,7 +364,7 @@ void Hydra::Server::Apache2::signal(std::string signal){
 
 			newenviron[n] = NULL;
 
-			execve("/usr/sbin/apache2", newargv, newenviron);
+			execve(m_binary.c_str(), newargv, newenviron);
 
 			_exit(0);
 		}

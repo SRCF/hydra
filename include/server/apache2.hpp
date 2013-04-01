@@ -85,6 +85,8 @@ private:
         // Number of live connections
 	uint32_t m_live;
 
+	std::string m_binary;
+
 };
 
 }
