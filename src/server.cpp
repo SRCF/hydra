@@ -66,18 +66,23 @@ void Hydra::Server::Base::hosts(HostMap& map){
 
 	std::list<std::string> tags = m_config.values("tag");
 
-	for(std::map<std::string, std::list<std::string> >::iterator it = hosts.begin(); it != hosts.end(); ++it){
+	int num = 0;
 
-		for(std::list<std::string>::iterator sit = it->second.begin(); sit != it->second.end(); ++sit){
-
-			if(it->first == ""){
+	for(std::map<std::string, std::list<std::string> >::iterator it = hosts.begin(); it != hosts.end(); ++it)
+	{
+		for(std::list<std::string>::iterator sit = it->second.begin(); sit != it->second.end(); ++sit)
+		{
+			if(it->first == "")
+			{
 				tagged[*sit] = tags;
-			} else {
-				tagged[*sit].push_back(it->first);	
+				num += tags.size();
 			}
-
+			else
+			{
+				tagged[*sit].push_back(it->first);
+				num += 1;
+			}
 		}
-
 	}
 
 	for(std::map<std::string, std::list<std::string> >::iterator it = tagged.begin(); it != tagged.end(); ++it){
@@ -86,5 +91,9 @@ void Hydra::Server::Base::hosts(HostMap& map){
 
 	}
 
+	if (num == 0)
+	{
+		throw new Hydra::Exception(std::string("Hydra->Server->No hosts configured for: " + m_name));
+	}
 }
 
