@@ -54,6 +54,7 @@ public:
 	void refresh();
 
 	Section section(std::string name);
+	Section section(std::string name, bool missing);
 	std::map<std::string, Section> sections();
 
 private:

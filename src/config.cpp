@@ -210,16 +210,28 @@ void Hydra::Config::parse(const std::string& filename){
 
 }
 
-Hydra::Config::Section Hydra::Config::section(std::string name){
+Hydra::Config::Section Hydra::Config::section(std::string name)
+{
+	return section(name, true);
+}
+
+Hydra::Config::Section Hydra::Config::section(std::string name, bool missing)
+{
 
 // Take out a lock
 
 	std::map<std::string, Hydra::Config::Section>::const_iterator section = m_sections.find(name);
 
-	if(section == m_sections.end()){
-
-		throw new Hydra::Exception(std::string("Hydra->Config->Section not found: ").append(name));
-
+	if(section == m_sections.end())
+	{
+		if (missing)
+		{
+			return Hydra::Config::Section();
+		}
+		else
+		{
+			throw new Hydra::Exception(std::string("Hydra->Config->Section not found: ").append(name));
+		}
 	}
 
 // Return the lock
