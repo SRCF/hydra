@@ -24,7 +24,7 @@ $ make
 $ sudo make install
 ```
 
-At this point, there is a copy of the `hydra` daemon - `/usr/local/sbin/hydra`.
+At this point, there is a copy of the `hydra` daemon installed in `/usr/local/sbin/hydra`.
 
 Developing
 ----------
