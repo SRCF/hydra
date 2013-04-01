@@ -15,6 +15,7 @@
 #include "oscompat.hpp"
 
 #include <boost/bind.hpp>
+#include <boost/smart_ptr.hpp>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -62,21 +63,21 @@ Hydra::Server::Apache2::Apache2(std::string name, Hydra::Config::Section config,
 	std::string group = config.value("group");
 
 	{
+		errno = 0;
 		size_t bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
 
-		if(bufsize == ((size_t) -1)){
-			throw new Exception("Hydra->Server->Apache2->Unknown user buffer size");
+		if(errno){
+			std::string message = "Hydra->Server->Apache2->Unknown user buffer size: ";
+			throw new Exception(message + strerror(errno));
 		}
 
-		char* buffer = new char[bufsize];
+		boost::scoped_array<char> buffer(new char[bufsize]);
+		struct passwd data, *ptr;
 
-		struct passwd data;
-		struct passwd* ptr;
-
-		int result = getpwnam_r(user.c_str(), &data, buffer, bufsize, &ptr);
+		int result = getpwnam_r(user.c_str(), &data, buffer.get(), bufsize, &ptr);
 
 		if(result != 0){
-			std::string message = "Hydra->Server->Apache2->User data lookup failed";
+			std::string message = "Hydra->Server->Apache2->User data lookup failed for: ";
 			throw new Exception(message + name);
 		}
 
@@ -87,37 +88,34 @@ Hydra::Server::Apache2::Apache2(std::string name, Hydra::Config::Section config,
 
 		m_uid = ptr->pw_uid;
 		m_user = ptr->pw_name;
-
-		delete[] buffer;
 	}
 
 	{
+		errno = 0;
 		size_t bufsize = sysconf(_SC_GETGR_R_SIZE_MAX);
 
-		if(bufsize == ((size_t) -1)){
-			throw new Exception("Hydra->Server->Apache2->Unknown group buffer size");
+		if(errno){
+			std::string message = "Hydra->Server->Apache2->Unknown group buffer size: ";
+			throw new Exception(message + strerror(errno));
 		}
 
-		char* buffer = new char[bufsize];
+		boost::scoped_array<char> buffer(new char[bufsize]);
+		struct group data, *ptr;
 
-		struct group data;
-		struct group* ptr;
-
-		int result = getgrnam_r(group.c_str(), &data, buffer, bufsize, &ptr);
+		int result = getgrnam_r(group.c_str(), &data, buffer.get(), bufsize, &ptr);
 
 		if(result != 0){
-			throw new Exception("Hydra->Server->Apache2->Group data lookup failed");
+			std::string message = "Hydra->Server->Apache2->Group data lookup failed for: ";
+			throw new Exception(message + group);
 		}
 
 		if(ptr == 0){
-			throw new Exception("Hydra->Server->Apache2->Group not found");
+			std::string message = "Hydra->Server->Apache2->Group not found for: ";
+			throw new Exception(message + group);
 		}
 
 		m_gid = ptr->gr_gid;
 		m_group = ptr->gr_name;
-
-		delete[] buffer;
-
 	}
 
 	// Make required directories
