@@ -257,6 +257,38 @@ void Hydra::Server::Apache2::start()
 			}
 		}
 
+		#else
+
+		{
+			struct loadavg loadavg;
+			size_t len = sizeof(loadavg);
+
+			int error = sysctlbyname("vm.loadavg", &loadavg, &len, NULL, NULL);
+
+			if (error != 0)
+			{
+				throw new Hydra::Exception("Hydra->Apache2->Unable to retrieve load data");
+			}
+
+			if (loadavg.ldavg[0] > ((float) (loadavg.fscale) * m_load_1))
+			{
+				// Load too high.
+				throw new Hydra::Exception("Hydra->Apache2->System exceeding load 1 min max");
+			}
+
+			if (loadavg.ldavg[1] > ((float) (loadavg.fscale) * m_load_5))
+			{
+				// Load too high.
+				throw new Hydra::Exception("Hydra->Apache2->System exceeding load 5 min max");
+			}
+
+			if (loadavg.ldavg[2] > ((float) (loadavg.fscale) * m_load_15))
+			{
+				// Load too high.
+				throw new Hydra::Exception("Hydra->Apache2->System exceeding load 15 min max");
+			}
+		}
+
 		#endif
 
 		signal("start");
@@ -489,7 +521,32 @@ void Hydra::Server::Apache2::handle_timeout(const boost::system::error_code& e)
 
 			#else
 
-			reap("Unable to determine system load");
+			{
+				struct loadavg loadavg;
+				size_t len = sizeof(loadavg);
+
+				int error = sysctlbyname("vm.loadavg", &loadavg, &len, NULL, NULL);
+
+				if (error != 0)
+				{
+					reap("Unable to get load information");
+				}
+
+				if (loadavg.ldavg[0] > ((float) (loadavg.fscale) * m_load_1))
+				{
+					reap("1 min load exceeded");
+				}
+
+				if (loadavg.ldavg[1] > ((float) (loadavg.fscale) * m_load_5))
+				{
+					reap("5 min load exceeded");
+				}
+
+				if (loadavg.ldavg[2] > ((float) (loadavg.fscale) * m_load_15))
+				{
+					reap("15 min load exceeded");
+				}
+			}
 
 			#endif
 		}
